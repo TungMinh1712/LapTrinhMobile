@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../models/user_session.dart';
 
-
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -20,8 +19,7 @@ class _RegisterPageState extends State<RegisterPage> {
   String selectedRole = "Người dùng";
   DateTime? birthDate;
 
-  final List<String> genders = ["Nam", "Nữ", "Khác"];
-  final List<String> roles = ["Người dùng", "Bác sĩ", "Quản trị viên"];
+  final List<String> genders = ["Nam", "Nữ"];
 
   Future<void> _pickBirthDate() async {
     final DateTime? picked = await showDatePicker(
@@ -101,18 +99,6 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
 
             const SizedBox(height: 15),
-
-            /// VAI TRÒ
-            DropdownButtonFormField<String>(
-              value: selectedRole,
-              decoration: const InputDecoration(labelText: "Vai trò"),
-              items: roles
-                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                  .toList(),
-              onChanged: (value) {
-                setState(() => selectedRole = value!);
-              },
-            ),
 
             const SizedBox(height: 30),
 
