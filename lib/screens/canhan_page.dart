@@ -39,9 +39,7 @@ class CaNhanPage extends StatelessWidget {
               radius: 50,
               child: Icon(Icons.person, size: 50),
             ),
-
             const SizedBox(height: 10),
-
             Text(
               user.name,
               style: const TextStyle(
@@ -49,27 +47,17 @@ class CaNhanPage extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             Text(
               user.email,
               style: const TextStyle(color: Colors.grey),
             ),
-
             const SizedBox(height: 25),
-
             _infoTile(Icons.phone, "Số điện thoại", user.phone),
-
             _infoTile(Icons.cake, "Ngày sinh",
                 "${user.birthDate.day}/${user.birthDate.month}/${user.birthDate.year}"),
-
             _infoTile(Icons.wc, "Giới tính", user.gender),
-
-            _infoTile(Icons.badge, "Vai trò", user.role),
-
             _infoTile(Icons.email, "Email", user.email),
-
             const Spacer(),
-
             ElevatedButton.icon(
               icon: const Icon(Icons.logout),
               label: const Text("Đăng xuất"),

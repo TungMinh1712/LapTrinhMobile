@@ -15,17 +15,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late DateTime selectedBirthDate;
   late String selectedGender;
 
-  final List<String> roles = [
-    "Người dùng",
-    "Bác sĩ",
-    "Quản trị viên",
-  ];
-
-  final List<String> genders = [
-    "Nam",
-    "Nữ",
-    "Khác",
-  ];
+  final List<String> genders = ["Nam", "Nữ"];
 
   @override
   void initState() {
@@ -108,30 +98,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 onChanged: (value) {
                   setState(() {
                     selectedGender = value!;
-                  });
-                },
-              ),
-
-              const SizedBox(height: 15),
-
-              // Vai trò
-              DropdownButtonFormField<String>(
-                value: selectedRole,
-                decoration: const InputDecoration(
-                  labelText: "Vai trò",
-                  border: OutlineInputBorder(),
-                ),
-                items: roles
-                    .map(
-                      (role) => DropdownMenuItem(
-                        value: role,
-                        child: Text(role),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedRole = value!;
                   });
                 },
               ),
