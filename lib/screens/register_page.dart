@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
-import '../models/user_session.dart';
+import '../models/user.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -16,7 +16,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController passwordController = TextEditingController();
 
   String selectedGender = "Nam";
-  String selectedRole = "Người dùng";
   DateTime? birthDate;
 
   final List<String> genders = ["Nam", "Nữ"];
@@ -124,7 +123,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     name: nameController.text,
                     email: emailController.text,
                     phone: phoneController.text,
-                    role: selectedRole,
                     gender: selectedGender,
                     birthDate: birthDate!,
                   );

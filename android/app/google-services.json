@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "537125186662",
+    "project_id": "laptrinhmobile-1ed65",
+    "storage_bucket": "laptrinhmobile-1ed65.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537125186662:android:8a0383059290967fb7d1a7",
+        "android_client_info": {
+          "package_name": "com.example.doanlaptrinhmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHYT4r5HwtctktHqJnC6XxBEPVie5Lhf0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

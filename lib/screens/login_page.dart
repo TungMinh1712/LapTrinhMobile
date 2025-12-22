@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
 import 'register_page.dart';
-import '../models/user_session.dart';
+import '../models/user.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -25,9 +25,7 @@ class LoginPage extends StatelessWidget {
                 prefixIcon: Icon(Icons.email),
               ),
             ),
-
             const SizedBox(height: 15),
-
             TextField(
               controller: passwordController,
               obscureText: true,
@@ -36,9 +34,7 @@ class LoginPage extends StatelessWidget {
                 prefixIcon: Icon(Icons.lock),
               ),
             ),
-
             const SizedBox(height: 25),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -86,9 +82,7 @@ class LoginPage extends StatelessWidget {
                 child: const Text("Đăng nhập"),
               ),
             ),
-
             const SizedBox(height: 10),
-
             TextButton(
               onPressed: () {
                 Navigator.push(
@@ -98,7 +92,7 @@ class LoginPage extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text("Chưa có tài khoản? Đăng ký"),
+              child: const Text("Đăng ký"),
             ),
           ],
         ),
