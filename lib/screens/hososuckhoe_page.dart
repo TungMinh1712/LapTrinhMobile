@@ -12,7 +12,7 @@ class HoSoSucKhoePage extends StatelessWidget {
         child: Column(
           children: const [
             HoSoItem(
-              ten: "TRẦN TÙNG MINH",
+              ten: "NGUYỄN VĂN A",
               ma: "W25-0555247",
               sdt: "038****034",
             ),
@@ -119,7 +119,7 @@ class ChonChucNangSheet extends StatelessWidget {
           const SizedBox(height: 12),
 
           const Text(
-            "Hồ sơ: TRẦN TÙNG MINH (W25-0555247)",
+            "Hồ sơ: NGUYỄN VĂN A (W25-0555247)",
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.blue),
           ),
