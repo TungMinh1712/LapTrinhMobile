@@ -1,101 +1,130 @@
 import 'package:flutter/material.dart';
+import '../services/user_service.dart';
+import '../models/user_model.dart';
 import 'main_navigation.dart';
 import 'register_page.dart';
-import '../models/user.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
+  State<LoginPage> createState() => _LoginPageState();
+}
 
+class _LoginPageState extends State<LoginPage> {
+  final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  String normalizePhone(String phone) {
+    phone = phone.replaceAll(" ", "");
+    if (phone.startsWith("+84")) return "0${phone.substring(3)}";
+    if (phone.startsWith("84")) return "0${phone.substring(2)}";
+    return phone;
+  }
+
+  Future<void> login() async {
+    final phone = normalizePhone(phoneController.text);
+
+    final user = await UserService.login(phone, passwordController.text);
+
+    if (user == null) {
+      show("Sai số điện thoại hoặc mật khẩu");
+      return;
+    }
+
+    UserSession.currentUser = user;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const MainNavigation()),
+    );
+  }
+
+  void show(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Đăng nhập")),
+      backgroundColor: const Color(0xffF6F8FC),
+      appBar: AppBar(
+        title: const Text("Đăng nhập"),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(
-                labelText: "Email",
-                prefixIcon: Icon(Icons.email),
+            Center(
+              child: const Text(
+                "Chào mừng tới ứng dụng",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Mật khẩu",
-                prefixIcon: Icon(Icons.lock),
-              ),
-            ),
-            const SizedBox(height: 25),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
+            const SizedBox(height: 30),
+            _input(phoneController, "Số điện thoại", Icons.phone),
+            _input(passwordController, "Mật khẩu", Icons.lock, obscure: true),
+            const SizedBox(height: 30),
+            _primaryButton("Đăng nhập", login),
+            const SizedBox(height: 20),
+            Center(
+              child: OutlinedButton(
                 onPressed: () {
-                  if (emailController.text.isEmpty ||
-                      passwordController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Vui lòng nhập đầy đủ thông tin"),
-                      ),
-                    );
-                    return;
-                  }
-
-                  final registeredUser = UserSession.registeredUser;
-
-                  if (registeredUser == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Chưa có tài khoản, vui lòng đăng ký"),
-                      ),
-                    );
-                    return;
-                  }
-
-                  if (registeredUser.email != emailController.text) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Email không tồn tại"),
-                      ),
-                    );
-                    return;
-                  }
-
-                  // ✅ LOGIN = USER ĐÃ ĐĂNG KÝ
-                  UserSession.currentUser = registeredUser;
-
-                  Navigator.pushReplacement(
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const MainNavigation(),
+                      builder: (_) => const RegisterPage(),
                     ),
                   );
                 },
-                child: const Text("Đăng nhập"),
+                child: const Text("Đăng ký tài khoản mới"),
               ),
-            ),
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const RegisterPage(),
-                  ),
-                );
-              },
-              child: const Text("Đăng ký"),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _input(TextEditingController c, String hint, IconData icon,
+      {bool obscure = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: TextField(
+        controller: c,
+        obscureText: obscure,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(icon),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _primaryButton(String text, VoidCallback onTap) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+        ),
+        onPressed: onTap,
+        child: Text(text,
+            style: const TextStyle(fontSize: 16, color: Colors.white)),
       ),
     );
   }

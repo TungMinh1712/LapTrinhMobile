@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/user.dart';
+import '../models/user_model.dart';
 import 'login_page.dart';
 
 class CaNhanPage extends StatelessWidget {
