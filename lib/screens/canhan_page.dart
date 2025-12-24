@@ -16,6 +16,8 @@ class CaNhanPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Cá nhân"),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),

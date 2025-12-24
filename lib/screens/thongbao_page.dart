@@ -7,7 +7,10 @@ class ThongBaoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xffeef7ff),
-      appBar: AppBar(title: const Text("Thông báo")),
+      appBar: AppBar(
+          title: const Text("Thông báo"),
+          centerTitle: true,
+          automaticallyImplyLeading: false),
       body: const Center(
         child: Text("Trang Thông báo", style: TextStyle(fontSize: 20)),
       ),

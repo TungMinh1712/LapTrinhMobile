@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'huongdan_page.dart';
 import 'lienhe_page.dart';
+import 'lichkhambenh_page.dart';
 
 class ChucNangPage extends StatelessWidget {
   const ChucNangPage({super.key});
@@ -12,6 +13,7 @@ class ChucNangPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Chức năng"),
         centerTitle: true,
+        automaticallyImplyLeading: false,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -20,12 +22,14 @@ class ChucNangPage extends StatelessWidget {
             _buildCardItem(
               icon: Icons.calendar_month,
               title: "Lịch khám bệnh",
-              onTap: () {},
-            ),
-            _buildCardItem(
-              icon: Icons.price_change,
-              title: "Bảng giá dịch vụ",
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LichKhamBenhPage(),
+                  ),
+                );
+              },
             ),
             _buildCardItem(
               icon: Icons.phone,
