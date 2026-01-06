@@ -1,468 +1,966 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:doanlaptrinhmobile/models/patient_model.dart';
+import 'package:doanlaptrinhmobile/models/appointment_model.dart';
+import 'dart:math';
+import 'package:doanlaptrinhmobile/screens/main_navigation.dart';
 
-// --- MÀN HÌNH CHÍNH: ĐẶT KHÁM ---
-class DatKhamPage extends StatefulWidget {
+/// ================= ENTRY PAGE =================
+class DatKhamPage extends StatelessWidget {
   const DatKhamPage({super.key});
 
   @override
-  State<DatKhamPage> createState() => _DatKhamPageState();
-}
-
-class _DatKhamPageState extends State<DatKhamPage> {
-  // Dữ liệu giả lập
-  final List<String> doctors = [
-    "BS. Nguyễn Văn A - Nội khoa",
-    "BS. Trần Thị B - Nhi khoa",
-    "BS. Lê Văn C - Tim mạch",
-    "BS. Phạm Thị D - Da liễu"
-  ];
-
-  final List<String> timeSlots = [
-    "08:00",
-    "08:30",
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "13:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00"
-  ];
-
-  // --- State quản lý dữ liệu ---
-  int _selectedDoctorIndex = 0;
-  int _selectedTimeIndex = -1;
-  DateTime _selectedDate = DateTime.now();
-  final TextEditingController _noteController = TextEditingController();
-
-  // Quản lý hồ sơ bệnh nhân
-  // Biến này lưu danh sách các hồ sơ đã tạo
-  List<Map<String, String>> _profiles = [];
-  // Biến này lưu hồ sơ đang được chọn để đặt khám
-  Map<String, String>? _selectedProfile;
-
-  // Hàm mở màn hình tạo hồ sơ và nhận lại dữ liệu
-  void _openCreateProfile() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CreateProfileScreen()),
-    );
-
-    if (result != null && result is Map<String, String>) {
-      setState(() {
-        _profiles.add(result); // Thêm vào danh sách
-        _selectedProfile = result; // Tự động chọn hồ sơ vừa tạo
-      });
-    }
-  }
-
-  // Hàm chọn ngày
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Colors.blue),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Đặt khám')),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Chọn hồ sơ đặt khám',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
 
-  // Hàm xử lý đặt khám
-  void _confirmBooking() {
-    // 1. Kiểm tra đã chọn hồ sơ chưa
-    if (_selectedProfile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Vui lòng tạo hoặc chọn hồ sơ người bệnh!")),
-      );
-      return;
-    }
+          /// ==== AVATAR HỒ SƠ ====
+          SizedBox(
+            height: 130,
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance.collection('patients').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-    // 2. Kiểm tra giờ khám
-    if (_selectedTimeIndex == -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vui lòng chọn giờ khám!")),
-      );
-      return;
-    }
+                final docs = snapshot.data!.docs;
 
-    // 3. Hiển thị xác nhận
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Xác nhận đặt khám"),
-        content: SingleChildScrollView(
-          child: ListBody(
-            children: [
-              _buildInfoRow("Bệnh nhân:", _selectedProfile!['fullName'] ?? ""),
-              _buildInfoRow("Bác sĩ:", doctors[_selectedDoctorIndex]),
-              _buildInfoRow("Ngày:",
-                  "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}"),
-              _buildInfoRow("Giờ:", timeSlots[_selectedTimeIndex]),
-              _buildInfoRow(
-                  "Triệu chứng:",
-                  _noteController.text.isEmpty
-                      ? "Không có"
-                      : _noteController.text),
-            ],
+                return ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    _avatarAdd(context),
+                    ...docs.map((doc) => _avatarProfile(context, doc)).toList(),
+                  ],
+                );
+              },
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Hủy"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Đặt khám thành công!")),
-              );
-            },
-            child: const Text("Đồng ý"),
+
+          const Divider(),
+
+          /// ==== DANH SÁCH HỒ SƠ ====
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance.collection('patients').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                return ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: snapshot.data!.docs.map((doc) {
+                    return _patientCard(context, doc);
+                  }).toList(),
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  /// ================= UI =================
+
+  Widget _avatarAdd(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TaoHoSoPage()),
+        );
+      },
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 36,
+            backgroundColor: Colors.blue.shade50,
+            child: const Icon(Icons.add, color: Colors.blue, size: 32),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Thêm mới\nhồ sơ',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _avatarProfile(BuildContext context, QueryDocumentSnapshot doc) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(color: Colors.black, fontSize: 14),
+      padding: const EdgeInsets.only(left: 16),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChonNgayKhamPage(
+                patientId: doc.id,
+                patientName: doc['fullName'],
+              ),
+            ),
+          );
+        },
+        child: Column(
           children: [
-            TextSpan(
-                text: "$label ",
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            TextSpan(text: value),
+            const CircleAvatar(
+              radius: 36,
+              backgroundColor: Colors.blue,
+              child: Icon(Icons.person, color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              doc['fullName'],
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12),
+            ),
           ],
         ),
       ),
     );
   }
 
+  Widget _patientCard(BuildContext context, QueryDocumentSnapshot doc) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        title: Text(doc['fullName'],
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(doc['phone']),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChonNgayKhamPage(
+                patientId: doc.id,
+                patientName: doc['fullName'],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// ================= TẠO HỒ SƠ =================
+class TaoHoSoPage extends StatefulWidget {
+  const TaoHoSoPage({super.key});
+
+  @override
+  State<TaoHoSoPage> createState() => _TaoHoSoPageState();
+}
+
+class _TaoHoSoPageState extends State<TaoHoSoPage> {
+  final _formKey = GlobalKey<FormState>();
+
+  String fullName = '';
+  String phone = '';
+  String cccd = '';
+  String gender = 'Nam';
+  DateTime? birthDate;
+  String address = '';
+  String job = '';
+
+  Future<void> _savePatient() async {
+    final patient = PatientModel(
+      id: '',
+      fullName: fullName,
+      phone: phone,
+      cccd: cccd,
+      gender: gender,
+      birthDate: birthDate!,
+      address: address,
+      job: job,
+    );
+
+    await FirebaseFirestore.instance
+        .collection('patients')
+        .add(patient.toMap());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Đặt lịch khám bệnh"),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        centerTitle: true,
+        title: const Text('Tạo hồ sơ'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- PHẦN 1: THÔNG TIN NGƯỜI BỆNH (QUAN TRỌNG) ---
-            const Text("Hồ sơ người bệnh",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        _input(
+                          icon: Icons.person,
+                          label: 'Họ tên',
+                          onSaved: (v) => fullName = v,
+                        ),
+                        _input(
+                          icon: Icons.phone,
+                          label: 'Số điện thoại',
+                          keyboardType: TextInputType.phone,
+                          onSaved: (v) => phone = v,
+                        ),
+                        _input(
+                          icon: Icons.badge,
+                          label: 'CCCD',
+                          keyboardType: TextInputType.number,
+                          onSaved: (v) => cccd = v,
+                        ),
 
-            if (_selectedProfile == null)
-              // Trường hợp chưa có hồ sơ -> Hiện nút tạo
-              InkWell(
-                onTap: _openCreateProfile,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: Colors.blue, style: BorderStyle.solid),
-                  ),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.add_circle_outline,
-                          color: Colors.blue, size: 30),
-                      SizedBox(height: 8),
-                      Text("Chưa có hồ sơ. Nhấn để tạo mới",
-                          style: TextStyle(
-                              color: Colors.blue, fontWeight: FontWeight.bold)),
-                    ],
+                        /// ===== GIỚI TÍNH =====
+                        DropdownButtonFormField<String>(
+                          value: gender,
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.wc),
+                            labelText: 'Giới tính',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'Nam', child: Text('Nam')),
+                            DropdownMenuItem(value: 'Nữ', child: Text('Nữ')),
+                          ],
+                          onChanged: (v) => setState(() => gender = v!),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        /// ===== NGÀY SINH =====
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now()
+                                  .subtract(const Duration(days: 365 * 20)),
+                              firstDate: DateTime(1900),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              setState(() => birthDate = picked);
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              prefixIcon: Icon(Icons.cake),
+                              labelText: 'Ngày sinh',
+                              border: OutlineInputBorder(),
+                            ),
+                            child: Text(
+                              birthDate == null
+                                  ? 'Chọn ngày sinh'
+                                  : '${birthDate!.day}/${birthDate!.month}/${birthDate!.year}',
+                              style: TextStyle(
+                                color: birthDate == null
+                                    ? Colors.grey
+                                    : Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        if (birthDate == null)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                            ),
+                          ),
+
+                        const SizedBox(height: 16),
+
+                        _input(
+                          icon: Icons.work,
+                          label: 'Nghề nghiệp',
+                          onSaved: (v) => job = v,
+                        ),
+                        _input(
+                          icon: Icons.location_on,
+                          label: 'Địa chỉ',
+                          maxLines: 2,
+                          onSaved: (v) => address = v,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              )
-            else
-              // Trường hợp ĐÃ có hồ sơ -> Hiện thông tin
-              Container(
+              ),
+            ),
+          ),
+
+          /// ===== NÚT XÁC NHẬN =====
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                onPressed: () async {
+                  if (_formKey.currentState!.validate() && birthDate != null) {
+                    _formKey.currentState!.save();
+                    await _savePatient();
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text(
+                  'XÁC NHẬN',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ===== INPUT DÙNG CHUNG =====
+  Widget _input({
+    required IconData icon,
+    required String label,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    required Function(String) onSaved,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon),
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        validator: (v) => v == null || v.isEmpty ? 'Không được để trống' : null,
+        onSaved: (v) => onSaved(v!),
+      ),
+    );
+  }
+}
+
+/// ================= CHỌN NGÀY KHÁM =================
+class ChonNgayKhamPage extends StatefulWidget {
+  final String patientId;
+  final String patientName;
+  const ChonNgayKhamPage(
+      {required this.patientId, required this.patientName, super.key});
+
+  @override
+  State<ChonNgayKhamPage> createState() => _ChonNgayKhamPageState();
+}
+
+class _ChonNgayKhamPageState extends State<ChonNgayKhamPage> {
+  late DateTime _currentMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentMonth = DateTime.now();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final firstDayOfMonth =
+        DateTime(_currentMonth.year, _currentMonth.month, 1);
+
+    final daysInMonth =
+        DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+
+    /// Thứ trong tuần (T2 = 1 ... CN = 7)
+    final startWeekday = firstDayOfMonth.weekday; // 1 - 7
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Chọn ngày khám'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          /// ===== HEADER THÁNG =====
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth = DateTime(
+                        _currentMonth.year,
+                        _currentMonth.month - 1,
+                      );
+                    });
+                  },
+                ),
+                Text(
+                  'Tháng ${_currentMonth.month}/${_currentMonth.year}',
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth = DateTime(
+                        _currentMonth.year,
+                        _currentMonth.month + 1,
+                      );
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          /// ===== THỨ TRONG TUẦN =====
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                _Weekday('T2'),
+                _Weekday('T3'),
+                _Weekday('T4'),
+                _Weekday('T5'),
+                _Weekday('T6'),
+                _Weekday('T7'),
+                _Weekday('CN'),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          /// ===== LỊCH =====
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemCount: daysInMonth + (startWeekday - 1),
+              itemBuilder: (_, index) {
+                /// Ô trống đầu tháng
+                if (index < startWeekday - 1) {
+                  return const SizedBox();
+                }
+
+                final day = index - (startWeekday - 2);
+                final date = DateTime(
+                  _currentMonth.year,
+                  _currentMonth.month,
+                  day,
+                );
+
+                final isPast = date
+                    .isBefore(DateTime.now().subtract(const Duration(days: 1)));
+
+                return GestureDetector(
+                  onTap: isPast
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChonChuyenKhoaPage(
+                                patientId: widget.patientId,
+                                patientName: widget.patientName,
+                                date: date,
+                              ),
+                            ),
+                          );
+                        },
+                  child: Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isPast
+                          ? Colors.grey.shade300
+                          : const Color.fromARGB(255, 121, 192, 253),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$day',
+                      style: TextStyle(
+                        color: isPast ? Colors.grey : Colors.black,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ===== WIDGET THỨ =====
+class _Weekday extends StatelessWidget {
+  final String label;
+  const _Weekday(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 32,
+      child: Center(
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ================= CHỌN CHUYÊN KHOA=================
+class ChonChuyenKhoaPage extends StatelessWidget {
+  final String patientId;
+  final String patientName;
+  final DateTime date;
+
+  ChonChuyenKhoaPage({
+    required this.patientId,
+    required this.patientName,
+    required this.date,
+    super.key,
+  });
+
+  final departments = const [
+    "Nội tổng quát",
+    "Ngoại khoa",
+    "Tim mạch",
+    "Nhi khoa",
+    "Da liễu",
+    "Tai mũi họng",
+    "Răng hàm mặt",
+    "Sản phụ khoa",
+    "Thần kinh",
+    "Cơ xương khớp",
+    "Tiêu hóa",
+    "Hô hấp",
+  ];
+
+  final int price = 150000;
+
+  String formatPrice(int value) {
+    return '${value.toString().replaceAllMapped(
+          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]}.',
+        )}đ';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Chọn chuyên khoa'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: departments.length,
+        itemBuilder: (context, index) {
+          final d = departments[index];
+
+          return InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChonBacSiVaGioPage(
+                    patientId: patientId,
+                    patientName: patientName,
+                    date: date,
+                    department: d,
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  /// ICON INFO
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: Colors.blue,
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  /// TÊN KHOA
+                  Expanded(
+                    child: Text(
+                      d.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+
+                  /// GIÁ TIỀN
+                  Text(
+                    formatPrice(price),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  const Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// ================= CHỌN BÁC SĨ =================
+
+class ChonBacSiVaGioPage extends StatelessWidget {
+  final String patientId;
+  final String patientName;
+  final DateTime date;
+  final String department;
+
+  ChonBacSiVaGioPage({
+    required this.patientId,
+    required this.patientName,
+    required this.date,
+    required this.department,
+    super.key,
+  });
+
+  final times = const [
+    '06:30 - 07:30',
+    '07:30 - 08:30',
+    '08:30 - 09:30',
+    '09:30 - 10:30',
+    '10:30 - 11:30',
+  ];
+
+  String formatDate(DateTime d) => '${d.day.toString().padLeft(2, '0')}/'
+      '${d.month.toString().padLeft(2, '0')}/'
+      '${d.year}';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Chọn khung giờ khám'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('doctors')
+            .where('department', isEqualTo: department)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final doctors = snapshot.data!.docs;
+
+          if (doctors.isEmpty) {
+            return const Center(child: Text('Chưa có bác sĩ'));
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: doctors.length,
+            itemBuilder: (context, index) {
+              final doc = doctors[index];
+
+              /// ✅ GÁN PHÒNG THEO THỨ TỰ BÁC SĨ
+              final room = 'Phòng ${index + 1}';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.grey.withOpacity(0.1), blurRadius: 5)
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const CircleAvatar(
-                      backgroundColor: Colors.green,
-                      child: Icon(Icons.person, color: Colors.white),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _selectedProfile!['fullName']!,
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "SĐT: ${_selectedProfile!['phone']}",
-                            style: TextStyle(
-                                color: Colors.grey[600], fontSize: 13),
-                          ),
-                        ],
+                    /// ===== TÊN BÁC SĨ =====
+                    Text(
+                      doc['name'],
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.change_circle_outlined,
-                          color: Colors.blue),
-                      onPressed: () {
-                        // Logic chọn lại hồ sơ khác hoặc tạo mới
-                        _openCreateProfile();
-                      },
-                    )
+
+                    const SizedBox(height: 6),
+
+                    /// ===== PHÒNG =====
+                    Text(
+                      '$room - Buổi sáng',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    /// ===== NGÀY =====
+                    Text(
+                      '${formatDate(date)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+
+                    const Divider(height: 24),
+
+                    /// ===== KHUNG GIỜ =====
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: times.map((t) {
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            final appointmentData = {
+                              'patientId': patientId,
+                              'patientName': patientName,
+                              'doctorId': doc.id,
+                              'doctorName': doc['name'],
+                              'department': department,
+                              'date': formatDate(date),
+                              'time': t,
+                              'room': room,
+                              'status': 'pending',
+                            };
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => XacNhanLichKhamPage(
+                                  appointmentData: appointmentData,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.black),
+                            ),
+                            child: Text(
+                              t,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ],
                 ),
-              ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
 
-            const SizedBox(height: 25),
+/// ================= XÁC NHẬN LỊCH KHÁM =================
+class XacNhanLichKhamPage extends StatefulWidget {
+  final Map<String, dynamic> appointmentData;
 
-            // --- PHẦN 2: CHỌN BÁC SĨ ---
-            const Text("Chọn Bác sĩ",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
+  const XacNhanLichKhamPage({
+    required this.appointmentData,
+    super.key,
+  });
+
+  @override
+  State<XacNhanLichKhamPage> createState() => _XacNhanLichKhamPageState();
+}
+
+class _XacNhanLichKhamPageState extends State<XacNhanLichKhamPage> {
+  bool hasBHYT = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.appointmentData;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(title: const Text('Xác nhận lịch khám')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _info('Bệnh nhân', data['patientName']),
+            _info('Chuyên khoa', data['department']),
+            _info('Bác sĩ', data['doctorName']),
+            _info('Ngày', data['date']),
+            _info('Giờ', data['time']),
+            _info('Phòng', data['room']),
+
+            const SizedBox(height: 20),
+
+            /// ===== BHYT =====
+            CheckboxListTile(
+              value: hasBHYT,
+              title: const Text('Có bảo hiểm y tế (BHYT)'),
+              onChanged: (v) => setState(() => hasBHYT = v ?? false),
+            ),
+
+            const Spacer(),
+
+            /// ===== XÁC NHẬN =====
             SizedBox(
-              height: 120,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: doctors.length,
-                separatorBuilder: (ctx, i) => const SizedBox(width: 10),
-                itemBuilder: (context, index) {
-                  final isSelected = _selectedDoctorIndex == index;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedDoctorIndex = index),
-                    child: Container(
-                      width: 110,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? Colors.blue.withOpacity(0.1)
-                            : Colors.white,
-                        border: Border.all(
-                            color:
-                                isSelected ? Colors.blue : Colors.grey.shade300,
-                            width: 2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.medical_services,
-                              size: 28, color: Colors.blue),
-                          const SizedBox(height: 8),
-                          Text(
-                            doctors[index],
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal),
-                          ),
-                        ],
-                      ),
-                    ),
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                child: const Text(
+                  'XÁC NHẬN ĐẶT KHÁM',
+                  style: TextStyle(fontSize: 16),
+                ),
+                onPressed: () async {
+                  final finalData = {
+                    ...data,
+                    'hasBHYT': hasBHYT,
+                    'createdAt': FieldValue.serverTimestamp(),
+                  };
+
+                  await FirebaseFirestore.instance
+                      .collection('appointments')
+                      .add(finalData);
+
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MainNavigation()),
+                    (route) => false,
                   );
                 },
               ),
             ),
-
-            const SizedBox(height: 25),
-
-            // --- PHẦN 3: CHỌN NGÀY ---
-            const Text("Ngày khám",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            InkWell(
-              onTap: () => _selectDate(context),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        "Ngày: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-                        style: const TextStyle(fontSize: 16)),
-                    const Icon(Icons.calendar_month, color: Colors.blue),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            // --- PHẦN 4: CHỌN GIỜ ---
-            const Text("Giờ khám",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: List.generate(timeSlots.length, (index) {
-                final isSelected = _selectedTimeIndex == index;
-                return ChoiceChip(
-                  label: Text(timeSlots[index]),
-                  selected: isSelected,
-                  selectedColor: Colors.blue,
-                  labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black),
-                  onSelected: (selected) => setState(
-                      () => _selectedTimeIndex = selected ? index : -1),
-                );
-              }),
-            ),
-
-            const SizedBox(height: 25),
-
-            // --- PHẦN 5: TRIỆU CHỨNG ---
-            const Text("Triệu chứng / Ghi chú",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _noteController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: "Nhập lý do khám...",
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-              ),
-            ),
-            const SizedBox(height: 30),
           ],
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ElevatedButton(
-          onPressed: _confirmBooking,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          child: const Text("XÁC NHẬN ĐẶT KHÁM",
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white)),
         ),
       ),
     );
   }
-}
 
-// --- MÀN HÌNH PHỤ: FORM TẠO HỒ SƠ ---
-// (Bạn có thể tách ra file riêng hoặc để chung ở đây đều được)
-class CreateProfileScreen extends StatefulWidget {
-  const CreateProfileScreen({super.key});
-
-  @override
-  State<CreateProfileScreen> createState() => _CreateProfileScreenState();
-}
-
-class _CreateProfileScreenState extends State<CreateProfileScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-
-  void _saveProfile() {
-    if (_formKey.currentState!.validate()) {
-      // Trả dữ liệu về màn hình trước
-      Navigator.pop(context, {
-        'fullName': _nameController.text,
-        'phone': _phoneController.text,
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Thêm hồ sơ mới")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: "Họ và tên bệnh nhân",
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-                validator: (val) => val!.isEmpty ? "Vui lòng nhập tên" : null,
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: "Số điện thoại liên hệ",
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
-                ),
-                keyboardType: TextInputType.phone,
-                validator: (val) => val!.isEmpty ? "Vui lòng nhập SĐT" : null,
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15)),
-                  child: const Text("LƯU HỒ SƠ"),
-                ),
-              )
-            ],
+  Widget _info(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
-        ),
+          Expanded(child: Text(value)),
+        ],
       ),
     );
   }
