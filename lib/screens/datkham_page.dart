@@ -4,6 +4,8 @@ import 'package:doanlaptrinhmobile/models/patient_model.dart';
 import 'package:doanlaptrinhmobile/models/appointment_model.dart';
 import 'dart:math';
 import 'package:doanlaptrinhmobile/screens/main_navigation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/user_model.dart';
 
 /// ================= ENTRY PAGE =================
 class DatKhamPage extends StatelessWidget {
@@ -11,6 +13,8 @@ class DatKhamPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userId = UserSession.currentUser!.phone;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Đặt khám')),
       body: Column(
@@ -28,8 +32,10 @@ class DatKhamPage extends StatelessWidget {
           SizedBox(
             height: 130,
             child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance.collection('patients').snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('patients')
+                  .where('userId', isEqualTo: userId)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -54,16 +60,26 @@ class DatKhamPage extends StatelessWidget {
           /// ==== DANH SÁCH HỒ SƠ ====
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance.collection('patients').snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('patients')
+                  .where('userId', isEqualTo: userId)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                final docs = snapshot.data!.docs;
+
+                if (docs.isEmpty) {
+                  return const Center(
+                    child: Text('Chưa có hồ sơ'),
+                  );
+                }
+
                 return ListView(
                   padding: const EdgeInsets.all(16),
-                  children: snapshot.data!.docs.map((doc) {
+                  children: docs.map((doc) {
                     return _patientCard(context, doc);
                   }).toList(),
                 );
@@ -74,91 +90,91 @@ class DatKhamPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  /// ================= UI =================
+/// ================= UI =================
 
-  Widget _avatarAdd(BuildContext context) {
-    return GestureDetector(
+Widget _avatarAdd(BuildContext context) {
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const TaoHoSoPage()),
+      );
+    },
+    child: Column(
+      children: [
+        CircleAvatar(
+          radius: 36,
+          backgroundColor: Colors.blue.shade50,
+          child: const Icon(Icons.add, color: Colors.blue, size: 32),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Thêm mới\nhồ sơ',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _avatarProfile(BuildContext context, QueryDocumentSnapshot doc) {
+  return Padding(
+    padding: const EdgeInsets.only(left: 16),
+    child: GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const TaoHoSoPage()),
+          MaterialPageRoute(
+            builder: (_) => ChonNgayKhamPage(
+              patientId: doc.id,
+              patientName: doc['fullName'],
+            ),
+          ),
         );
       },
       child: Column(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 36,
-            backgroundColor: Colors.blue.shade50,
-            child: const Icon(Icons.add, color: Colors.blue, size: 32),
+            backgroundColor: Colors.blue,
+            child: Icon(Icons.person, color: Colors.white),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Thêm mới\nhồ sơ',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12),
+          Text(
+            doc['fullName'],
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _avatarProfile(BuildContext context, QueryDocumentSnapshot doc) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 16),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChonNgayKhamPage(
-                patientId: doc.id,
-                patientName: doc['fullName'],
-              ),
+Widget _patientCard(BuildContext context, QueryDocumentSnapshot doc) {
+  return Card(
+    margin: const EdgeInsets.only(bottom: 12),
+    child: ListTile(
+      title: Text(doc['fullName'],
+          style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text(doc['phone']),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChonNgayKhamPage(
+              patientId: doc.id,
+              patientName: doc['fullName'],
             ),
-          );
-        },
-        child: Column(
-          children: [
-            const CircleAvatar(
-              radius: 36,
-              backgroundColor: Colors.blue,
-              child: Icon(Icons.person, color: Colors.white),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              doc['fullName'],
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _patientCard(BuildContext context, QueryDocumentSnapshot doc) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        title: Text(doc['fullName'],
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(doc['phone']),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChonNgayKhamPage(
-                patientId: doc.id,
-                patientName: doc['fullName'],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
 }
 
 /// ================= TẠO HỒ SƠ =================
@@ -181,6 +197,8 @@ class _TaoHoSoPageState extends State<TaoHoSoPage> {
   String job = '';
 
   Future<void> _savePatient() async {
+    final userPhone = UserSession.currentUser!.phone;
+
     final patient = PatientModel(
       id: '',
       fullName: fullName,
@@ -192,9 +210,10 @@ class _TaoHoSoPageState extends State<TaoHoSoPage> {
       job: job,
     );
 
-    await FirebaseFirestore.instance
-        .collection('patients')
-        .add(patient.toMap());
+    await FirebaseFirestore.instance.collection('patients').add({
+      ...patient.toMap(),
+      'userId': userPhone,
+    });
   }
 
   @override
@@ -918,28 +937,30 @@ class _XacNhanLichKhamPageState extends State<XacNhanLichKhamPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                child: const Text(
-                  'XÁC NHẬN ĐẶT KHÁM',
-                  style: TextStyle(fontSize: 16),
-                ),
-                onPressed: () async {
-                  final finalData = {
-                    ...data,
-                    'hasBHYT': hasBHYT,
-                    'createdAt': FieldValue.serverTimestamp(),
-                  };
+                  child: const Text(
+                    'XÁC NHẬN ĐẶT KHÁM',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  onPressed: () async {
+                    final userId = UserSession.currentUser!.phone;
 
-                  await FirebaseFirestore.instance
-                      .collection('appointments')
-                      .add(finalData);
+                    final finalData = {
+                      ...data,
+                      'hasBHYT': hasBHYT,
+                      'userId': userId,
+                      'createdAt': FieldValue.serverTimestamp(),
+                    };
 
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MainNavigation()),
-                    (route) => false,
-                  );
-                },
-              ),
+                    await FirebaseFirestore.instance
+                        .collection('appointments')
+                        .add(finalData);
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MainNavigation()),
+                      (route) => false,
+                    );
+                  }),
             ),
           ],
         ),
