@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/user_model.dart';
 
 class LichSuDatKhamPage extends StatelessWidget {
   const LichSuDatKhamPage({super.key});
@@ -14,7 +15,7 @@ class LichSuDatKhamPage extends StatelessWidget {
           title: const Text('Lịch sử đặt khám'),
           centerTitle: true,
           backgroundColor: Colors.white,
-          foregroundColor: Colors.blue,
+          foregroundColor: Colors.black,
           elevation: 1,
           bottom: const TabBar(
             labelColor: Colors.blue,
@@ -46,11 +47,14 @@ class _BookingList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userId = UserSession.currentUser!.phone;
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('appointments')
+          .where('userId', isEqualTo: userId)
           .where('status', isEqualTo: status)
-          .snapshots(), // ❌ BỎ orderBy
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
